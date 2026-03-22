@@ -12,6 +12,7 @@ public class VpnManager
     // 初始化系统环境（允许 L2TP 穿透 NAT）
     public void InitializeSystem()
     {
+        Logger.Info("\n\n程序启动成功ヾ(≧▽≦*)o  初始化系统环境====================");
         try
         {
             Registry.SetValue(@"HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\PolicyAgent",

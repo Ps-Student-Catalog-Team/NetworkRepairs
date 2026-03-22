@@ -16,6 +16,18 @@ namespace NetworkTroubleshooter
             Task.Run(() => vpn.InitializeSystem());
         }
 
+        // 窗口关闭前断开 VPN
+        protected override void OnClosing(System.ComponentModel.CancelEventArgs e)
+        {
+            if (!vpn.Disconnect())
+            {
+                //实则不然
+                MessageBox.Show("未知错误", "错误",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            base.OnClosing(e);
+        }
+
         // 处理“下一步”点击
         private async void btnNext_Click(object sender, RoutedEventArgs e)
         {

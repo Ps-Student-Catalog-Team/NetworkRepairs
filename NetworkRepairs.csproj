@@ -16,6 +16,8 @@
     <Copyright>©Mircosoft Corporation. All rights reserved.</Copyright>
     <PackageIcon>icons8-互联网-100.png</PackageIcon>
     <NeutralLanguage>zh-CN</NeutralLanguage>
+	<DebugType>none</DebugType>
+	<DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
