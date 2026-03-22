@@ -1,0 +1,75 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - master                # 每次推送到 master 都运行（可选）
+    tags:
+      - 'v*'                  # 推送版本标签时触发（例如 v1.0.0）
+  pull_request:
+    branches:
+      - master                # PR 时也运行（可选）
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 安装 .NET SDK（适用于 .NET Core / .NET 5+ 项目）
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'    # 根据项目实际版本修改
+
+      # 如果项目是 .NET Framework，可以改用 Visual Studio 构建工具
+      # - name: Setup MSBuild
+      #   uses: microsoft/setup-msbuild@v2
+
+      # 恢复依赖
+      - name: Restore dependencies
+        run: dotnet restore NetworkRepairs.csproj
+
+      # 构建 Release 版本
+      - name: Build project
+        run: dotnet build NetworkRepairs.csproj --configuration Release --no-restore
+
+      # 发布为自包含或依赖框架的应用程序（如果需要）
+      # 对于 WPF 桌面应用，通常不需要发布步骤，直接使用构建输出即可
+      # 这里我们只保留构建输出，后续打包时直接使用 bin\Release 下的文件
+
+      # 打包构建产物（将 bin\Release 下的所有文件打包成 zip）
+      - name: Package build artifacts
+        run: |
+          $outputDir = "publish"
+          $sourceDir = "bin\Release\net8.0-windows"   # 根据实际输出路径调整
+          if (Test-Path $sourceDir) {
+            Compress-Archive -Path "$sourceDir\*" -DestinationPath "$outputDir\NetworkRepairs.zip"
+          } else {
+            Write-Host "输出目录不存在，尝试使用 bin\Release 下的所有文件"
+            Compress-Archive -Path "bin\Release\*" -DestinationPath "$outputDir\NetworkRepairs.zip"
+          }
+        shell: pwsh
+
+      # 上传 zip 包作为工作流产物（可选）
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetworkRepairs
+          path: publish/NetworkRepairs.zip
+
+      # 如果是标签触发，创建 Release 并上传 zip
+      - name: Create Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: publish/NetworkRepairs.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
