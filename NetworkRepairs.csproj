@@ -1,0 +1,39 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows7.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <ApplicationIcon>icons8-互联网-100.ico</ApplicationIcon>
+    <Title>网络疑难检查</Title>
+    <Version>10.0.26100.7920</Version>
+    <Authors>Mircosoft Corporation</Authors>
+    <Company>Mircosoft Corporation</Company>
+    <Copyright>©Mircosoft Corporation. All rights reserved.</Copyright>
+    <PackageIcon>icons8-互联网-100.png</PackageIcon>
+    <NeutralLanguage>zh-CN</NeutralLanguage>
+    <SupportedOSPlatformVersion>7.0</SupportedOSPlatformVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="interneticon.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="icons8-互联网-100.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\..\Downloads\icons8-互联网-100.png">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="interneticon.png" />
+  </ItemGroup>
+
+</Project>
