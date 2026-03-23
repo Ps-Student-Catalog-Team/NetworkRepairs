@@ -26,50 +26,27 @@ jobs:
         with:
           dotnet-version: '8.0.x'    # 根据项目实际版本修改
 
-      # 如果项目是 .NET Framework，可以改用 Visual Studio 构建工具
-      # - name: Setup MSBuild
-      #   uses: microsoft/setup-msbuild@v2
-
-      # 恢复依赖
+      # 恢复依赖（发布时会自动恢复，此处保留便于排查问题）
       - name: Restore dependencies
         run: dotnet restore NetworkRepairs.csproj
 
-      # 构建 Release 版本
-      - name: Build project
-        run: dotnet build NetworkRepairs.csproj --configuration Release --no-restore
+      # 发布为自包含应用程序（包含 .NET 运行时）
+      - name: Publish self-contained app
+        run: |
+          dotnet publish NetworkRepairs.csproj `
+            --configuration Release `
+            --self-contained true `
+            --runtime win-x64 `
+            --output ./publish_output `
+            -p:PublishSingleFile=true   # 可选：打包为单个 exe 文件
+        shell: pwsh
 
-      # 发布为自包含或依赖框架的应用程序（如果需要）
-      # 对于 WPF 桌面应用，通常不需要发布步骤，直接使用构建输出即可
-      # 这里我们只保留构建输出，后续打包时直接使用 bin\Release 下的文件
-
-      # 打包构建产物（将 bin\Release 下的所有文件打包成 zip）
+      # 将发布产物打包成 zip
       - name: Package build artifacts
         run: |
           $outputDir = "publish"
-          # 创建发布目录（如果不存在）
           New-Item -ItemType Directory -Force -Path $outputDir
-          # 尝试多种可能的输出路径
-          $possiblePaths = @(
-              "bin\Release\net8.0-windows",
-              "bin\Release\net6.0-windows",
-              "bin\Release\net5.0-windows",
-              "bin\Release\netcoreapp3.1",
-              "bin\Release"
-          )
-          $sourceDir = $null
-          foreach ($path in $possiblePaths) {
-              if (Test-Path $path) {
-                  $sourceDir = $path
-                  Write-Host "找到输出目录: $sourceDir"
-                  break
-              }
-          }
-          if ($sourceDir) {
-              Compress-Archive -Path "$sourceDir\*" -DestinationPath "$outputDir\NetworkRepairs.zip" -Force
-          } else {
-              Write-Host "错误：未找到任何输出目录，请检查构建步骤。"
-              exit 1
-          }
+          Compress-Archive -Path "./publish_output/*" -DestinationPath "$outputDir/NetworkRepairs.zip" -Force
         shell: pwsh
 
       # 上传 zip 包作为工作流产物（可选）
