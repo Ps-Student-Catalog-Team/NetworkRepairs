@@ -26,7 +26,7 @@ namespace NetworkTroubleshooter
         [DllImport("rasapi32.dll", CharSet = CharSet.Auto)]
         public static extern int RasSetCredentials(string lpszPhonebook, string lpszEntry, ref RASCREDENTIALS lpCredentials, bool fClearCredentials);
 
-        public bool CreateAndConnectVpn(string entryName = "12343" , string serverAddress = "10.88.20.273",  string userName = "ps" , string password = "\\@(^O^)@/", string psk = "pysyzx")
+        public bool CreateAndConnectVpn(string entryName, string serverAddress, string userName, string password, string psk)
         {
             try
             {
@@ -43,13 +43,11 @@ namespace NetworkTroubleshooter
                     RasDevice device = RasDevice.GetDeviceByName("WAN Miniport (L2TP)", RasDeviceType.Vpn);
                     RasEntry vpnEntry = RasEntry.CreateVpnEntry(entryName, serverAddress, RasVpnStrategy.L2tpOnly, device);
 
-                    // 核心配置：仅保留不报错的选项
                     vpnEntry.Options.UsePreSharedKey = true;
 
                     phoneBook.Entries.Add(vpnEntry);
                     vpnEntry.Update();
 
-                    // 写入预共享密钥
                     RASCREDENTIALS creds = new RASCREDENTIALS();
                     creds.dwSize = Marshal.SizeOf(typeof(RASCREDENTIALS));
                     creds.dwMask = RASCM_PreSharedKey;
@@ -64,7 +62,7 @@ namespace NetworkTroubleshooter
                         dialer.PhoneBookPath = pbPath;
                         dialer.Credentials = new NetworkCredential(userName, password);
                         
-                        dialer.Dial(); // 同步拨号
+                        dialer.Dial(); 
                         return true;
                     }
                 }
@@ -82,9 +80,13 @@ namespace NetworkTroubleshooter
             {
                 using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\PolicyAgent", true))
                 {
-                    if (key != null && key.GetValue("AssumeUDPEncapsulationContextOnSendRule")?.ToString() != "2")
+                    if (key != null)
                     {
-                        key.SetValue("AssumeUDPEncapsulationContextOnSendRule", 2, RegistryValueKind.DWord);
+                        object val = key.GetValue("AssumeUDPEncapsulationContextOnSendRule");
+                        if (val == null || val.ToString() != "2")
+                        {
+                            key.SetValue("AssumeUDPEncapsulationContextOnSendRule", 2, RegistryValueKind.DWord);
+                        }
                     }
                 }
             }
