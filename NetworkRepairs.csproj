@@ -36,6 +36,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="DotRas.for.Win7" Version="1.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Resource Include="interneticon.png" />
   </ItemGroup>
 
