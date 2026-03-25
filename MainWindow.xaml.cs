@@ -98,7 +98,7 @@ namespace NetworkTroubleshooter
             finally
             {
                 // 关闭窗口
-                this.Close();
+                this.Close(); 
             }
         }
 
