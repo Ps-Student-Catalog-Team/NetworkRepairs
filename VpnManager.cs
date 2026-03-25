@@ -143,5 +143,149 @@ namespace NetworkTroubleshooter
             }
         }
 
+        [DllImport("wininet.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        private static extern bool InternetSetOption(IntPtr hInternet, int dwOption, IntPtr lpBuffer, int dwBufferLength);
+
+        private const int INTERNET_OPTION_SETTINGS_CHANGED = 39;
+        private const int INTERNET_OPTION_REFRESH = 37;
+
+        // 注册表路径（当前用户）
+        private const string InternetSettingsRegPath = @"Software\Microsoft\Windows\CurrentVersion\Internet Settings";
+
+        /// <summary>
+        /// 设置系统代理（仅适用于当前用户）
+        /// </summary>
+        /// <param name="enable">是否启用代理</param>
+        /// <param name="proxyServer">代理服务器地址和端口，例如 "127.0.0.1:8080" 或 "http=127.0.0.1:8080;https=127.0.0.1:8080"</param>
+        /// <param name="bypassList">不使用代理的地址列表，用分号分隔，例如 "localhost;127.*;192.168.*"</param>
+        /// <returns>操作是否成功</returns>
+        public bool SetSystemProxy(bool enable, string proxyServer, string bypassList = "")
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsRegPath, true))
+                {
+                    if (key == null)
+                        return false;
+
+                    // 设置代理启用标志
+                    key.SetValue("ProxyEnable", enable ? 1 : 0, RegistryValueKind.DWord);
+
+                    if (enable)
+                    {
+                        // 设置代理服务器地址
+                        if (!string.IsNullOrEmpty(proxyServer))
+                            key.SetValue("ProxyServer", proxyServer, RegistryValueKind.String);
+
+                        // 设置绕过列表
+                        if (bypassList != null)
+                            key.SetValue("ProxyOverride", bypassList, RegistryValueKind.String);
+                    }
+                    else
+                    {
+                        // 可选：清除代理相关设置，但通常禁用即可
+                        // key.DeleteValue("ProxyServer", false);
+                        // key.DeleteValue("ProxyOverride", false);
+                    }
+                }
+
+                // 通知系统代理设置已更改
+                NotifyProxyChange();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"SetSystemProxy error: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 禁用系统代理（等同于调用 SetSystemProxy(false, null)）
+        /// </summary>
+        /// <returns>操作是否成功</returns>
+        public bool DisableSystemProxy()
+        {
+            return SetSystemProxy(false, null);
+        }
+
+        /// <summary>
+        /// 获取当前系统代理设置（仅用于调试/显示）
+        /// </summary>
+        /// <param name="enabled">是否启用代理</param>
+        /// <param name="proxyServer">代理服务器字符串</param>
+        /// <param name="bypassList">绕过列表</param>
+        public void GetSystemProxySettings(out bool enabled, out string proxyServer, out string bypassList)
+        {
+            enabled = false;
+            proxyServer = string.Empty;
+            bypassList = string.Empty;
+
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsRegPath))
+                {
+                    if (key != null)
+                    {
+                        enabled = (key.GetValue("ProxyEnable", 0) as int?) == 1;
+                        proxyServer = key.GetValue("ProxyServer", string.Empty) as string;
+                        bypassList = key.GetValue("ProxyOverride", string.Empty) as string;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"GetSystemProxySettings error: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 通知 Windows 代理设置已更改，使新设置立即生效
+        /// </summary>
+        private static void NotifyProxyChange()
+        {
+            try
+            {
+                // 通知所有应用程序代理设置已更改
+                InternetSetOption(IntPtr.Zero, INTERNET_OPTION_SETTINGS_CHANGED, IntPtr.Zero, 0);
+                // 刷新代理设置
+                InternetSetOption(IntPtr.Zero, INTERNET_OPTION_REFRESH, IntPtr.Zero, 0);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"NotifyProxyChange error: {ex.Message}");
+            }
+        }
+        /// <summary>
+        /// 清空系统代理设置并禁用代理（删除代理服务器地址和绕过列表）
+        /// </summary>
+        /// <returns>操作是否成功</returns>
+        public bool ClearAndDisableSystemProxy()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsRegPath, true))
+                {
+                    if (key == null)
+                        return false;
+
+                    // 禁用代理
+                    key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
+
+                    // 删除代理服务器地址和绕过列表（如果存在）
+                    key.DeleteValue("ProxyServer", false);  // false 表示如果值不存在也不抛出异常
+                    key.DeleteValue("ProxyOverride", false);
+                }
+
+                // 通知系统代理设置已更改
+                NotifyProxyChange();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"ClearAndDisableSystemProxy error: {ex.Message}");
+                return false;
+            }
+        }
     }
 }
