@@ -11,6 +11,7 @@ namespace NetworkTroubleshooter
         public MainWindow()
         {
             InitializeComponent();
+            Logger.Info("应用程序启动");
         }
 
         private async void btnNext_Click(object sender, RoutedEventArgs e)
@@ -54,6 +55,7 @@ namespace NetworkTroubleshooter
             catch (Exception ex)
             {
                 MessageBox.Show($"发生非预期错误: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                Logger.Error("VPN连接发生非预期错误", ex); 
                 ResetUi();
             }
         }
@@ -72,7 +74,33 @@ namespace NetworkTroubleshooter
             pBar.IsIndeterminate = false;
             pBar.Value = 0;
         }
-        private void btnCancel_Click(object sender, RoutedEventArgs e) => this.Close();
-        private void btnCloseTroubleshooter_Click(object sender, RoutedEventArgs e) => this.Close();
+        private void btnCancel_Click(object sender, RoutedEventArgs e)
+        {
+            DeleteVpnAndClose();
+        }
+
+        private void btnCloseTroubleshooter_Click(object sender, RoutedEventArgs e)
+        {
+            DeleteVpnAndClose();
+        }
+
+        private void DeleteVpnAndClose()
+        {
+            try
+            {
+                vpn.DeleteVpn("以太网 4");
+                
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("删除VPN时发生错误", ex);
+            }
+            finally
+            {
+                // 关闭窗口
+                this.Close();
+            }
+        }
+
     }
 }
