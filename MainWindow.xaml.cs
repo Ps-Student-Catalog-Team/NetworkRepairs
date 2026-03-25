@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Input;
 
 namespace NetworkTroubleshooter
 {
@@ -12,72 +11,69 @@ namespace NetworkTroubleshooter
         public MainWindow()
         {
             InitializeComponent();
-            // 程序启动时初始化系统设置（可放在后台）
-            Task.Run(() => vpn.InitializeSystem());
         }
 
-        // 处理“下一步”点击
         private async void btnNext_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                // UI 过渡
-                pnlWelcome.Visibility = Visibility.Collapsed;
-                pnlProgress.Visibility = Visibility.Visible;
-                btnNext.IsEnabled = false;
-                pBar.IsIndeterminate = true;
+                // UI 状态切换
+                SetUiState(isProcessing: true);
 
-                txtStatus.Text = "正在扫描本地网络状态...";
-                await Task.Delay(1500);
-
-                txtStatus.Text = "正在尝试重新同步...";
+                txtStatus.Text = "正在扫描网络状态...";
                 await Task.Delay(1000);
 
-                txtStatus.Text = "正在尝试 Internet 连接...";
-                await Task.Delay(1000);
+                txtStatus.Text = "正在尝试建立安全连接...";
 
-                // 执行 VPN 连接
-                txtStatus.Text = "正在建立安全连接...";
-                bool success = await Task.Run(() => vpn.Connect("ps", "\\@(^O^)@/"));
+                // 调用修复后的带参数方法
+                bool success = await Task.Run(() => vpn.CreateAndConnectVpn(
+                    "以太网 4",         // VPN 名称
+                    "10.88.202.73",    // 服务器地址
+                    "ps",              // 用户名
+                    @"\@(^O^)@/",      // 密码
+                    "pysyzx"           // 预共享密钥 (PSK)
+                ));
 
                 if (success)
                 {
                     pBar.IsIndeterminate = false;
                     pBar.Value = 100;
+                    txtStatus.Text = "连接已建立。";
+                    await Task.Delay(800);
+
                     pnlProgress.Visibility = Visibility.Collapsed;
                     pnlResult.Visibility = Visibility.Visible;
                 }
                 else
                 {
-                    // VPN连接失败，回退到欢迎界面或显示错误（这下看懂了）
-                    MessageBox.Show("网络验证失败，请检查网络或联系管理员。", "网络验证失败",
-                        MessageBoxButton.OK, MessageBoxImage.Error);
-                    pnlProgress.Visibility = Visibility.Collapsed;
-                    pnlWelcome.Visibility = Visibility.Visible;
-                    btnNext.IsEnabled = true;
+                    MessageBox.Show("网络验证失败。请确保：\n1. 以管理员身份运行此程序\n2. 账号密码及密钥正确\n3. 若是首次运行，请重启电脑以生效注册表设置。",
+                        "连接失败", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    ResetUi();
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error("VPN 连接过程发生未处理异常", ex);
-                MessageBox.Show("程序发生错误，请查看日志或联系技术支持。", "错误",
-                    MessageBoxButton.OK, MessageBoxImage.Error);
-                // 恢复界面
-                pnlProgress.Visibility = Visibility.Collapsed;
-                pnlWelcome.Visibility = Visibility.Visible;
-                btnNext.IsEnabled = true;
-                pBar.IsIndeterminate = false;
+                MessageBox.Show($"发生非预期错误: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                ResetUi();
             }
         }
 
-        private void btnCancel_Click(object sender, RoutedEventArgs e)
+        private void SetUiState(bool isProcessing)
         {
-            this.Close();
+            pnlWelcome.Visibility = isProcessing ? Visibility.Collapsed : Visibility.Visible;
+            pnlProgress.Visibility = isProcessing ? Visibility.Visible : Visibility.Collapsed;
+            btnNext.IsEnabled = !isProcessing;
+            pBar.IsIndeterminate = isProcessing;
         }
 
-        private void btnCloseTroubleshooter_Click(object sender, RoutedEventArgs e)
+        private void ResetUi()
         {
-            this.Close();
+            SetUiState(isProcessing: false);
+            pBar.IsIndeterminate = false;
+            pBar.Value = 0;
         }
+
+        private void btnCancel_Click(object sender, RoutedEventArgs e) => this.Close();
+        private void btnCloseTroubleshooter_Click(object sender, RoutedEventArgs e) => this.Close();
     }
 }
