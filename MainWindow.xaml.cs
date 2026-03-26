@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Input;
 
 namespace NetworkTroubleshooter
 {
@@ -48,11 +49,33 @@ namespace NetworkTroubleshooter
                 vpn.DeleteVpn("以太网 4");
             }
         }
-        private void txtAdvanced_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+
+        private void chkCreateProxy_Checked(object sender, RoutedEventArgs e)
         {
-            chkCreateProxy.Visibility = Visibility.Visible;
+            chkAdvancedSettings.Visibility = Visibility.Visible;
         }
 
+        private void chkCreateProxy_Unchecked(object sender, RoutedEventArgs e)
+        {
+            chkAdvancedSettings.Visibility = Visibility.Collapsed;
+        }
+
+        private void txtAdvanced_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            chkCreateProxy.Visibility = chkCreateProxy.Visibility == Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+
+            if (chkCreateProxy.Visibility != Visibility.Visible)
+            {
+                chkAdvancedSettings.Visibility = Visibility.Collapsed;
+            }
+            else
+            {
+                if (chkCreateProxy.IsChecked == true)
+                    chkAdvancedSettings.Visibility = Visibility.Visible;
+            }
+        }
         private async void btnNext_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -61,17 +84,20 @@ namespace NetworkTroubleshooter
 
                 if (chkCreateProxy.IsChecked == true)
                 {
-                    txtStatus.Text = "正在设置系统代理...";
+                    txtStatus.Text = "正在进行快速修复...";
                     await Task.Delay(1000);
-
-                    string proxyServer = $"10.88.202.73:10001";
+                    string proxyServer;
+                    if (chkAdvancedSettings.IsChecked == true)
+                        proxyServer = $"10.88.202.73:10002";
+                    else
+                        proxyServer = $"10.88.202.73:10001";
                     bool success = await Task.Run(() => vpn.SetSystemProxy(true, proxyServer, ""));
 
                     if (success)
                     {
                         pBar.IsIndeterminate = false;
                         pBar.Value = 100;
-                        txtStatus.Text = "系统代理已启用。";
+                        txtStatus.Text = "快速修复完成";
                         await Task.Delay(1000);
 
                         pnlProgress.Visibility = Visibility.Collapsed;

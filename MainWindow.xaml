@@ -82,7 +82,9 @@
                            TextWrapping="Wrap" Margin="60,0,0,0" LineHeight="20" Foreground="#333333"/>
                 <StackPanel Orientation="Horizontal" Margin="60,25,0,0" Width="419">
                     <TextBlock x:Name="txtAdvanced" Text="高级" Foreground="#0078D7" Cursor="Hand" MouseLeftButtonDown="txtAdvanced_MouseLeftButtonDown" RenderTransformOrigin="1.458,0.301"/>
-                    <CheckBox x:Name="chkCreateProxy" Content="创建代理而非VPN" Margin="20,0,0,0" Visibility="Collapsed" VerticalAlignment="Center"/>
+                    <CheckBox x:Name="chkCreateProxy" Content="启用快速修复" Margin="20,0,0,0"  Visibility="Collapsed" VerticalAlignment="Center" Checked="chkCreateProxy_Checked" Unchecked="chkCreateProxy_Unchecked"/>
+                    <CheckBox x:Name="chkAdvancedSettings" Content="使用高级设置" Margin="15,0,0,0" 
+              Visibility="Collapsed" VerticalAlignment="Center"/>
                 </StackPanel>
                 <TextBlock Text="     发布者: Microsoft Corporation" Margin="60,8,0,0" Foreground="#666666" FontSize="11"/>
             </StackPanel>

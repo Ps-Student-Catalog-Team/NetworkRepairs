@@ -184,7 +184,7 @@ namespace NetworkTroubleshooter
                     }
                     else
                     {
-                        // 可选：清除代理相关设置，但通常禁用即可
+                        // 清除代理相关设置
                         // key.DeleteValue("ProxyServer", false);
                         // key.DeleteValue("ProxyOverride", false);
                     }
