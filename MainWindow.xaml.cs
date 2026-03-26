@@ -1,8 +1,6 @@
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Navigation;
 
 namespace NetworkTroubleshooter
 {
@@ -19,15 +17,6 @@ namespace NetworkTroubleshooter
             this.Closing += MainWindow_Closing; // 注册关闭事件
         }
 
-        private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
-        {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = e.Uri.AbsoluteUri,
-                UseShellExecute = true // .NET Core / .NET 5+ 必须设为 true 才能打开浏览器
-            });
-            e.Handled = true;
-        }
         // 窗口关闭前的清理操作
         private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {

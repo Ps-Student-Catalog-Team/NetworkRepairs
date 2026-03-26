@@ -53,13 +53,17 @@
     </Window.Resources>
 
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="74*"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="70"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="60"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Grid.ColumnSpan="2">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="25,0">
                 <StackPanel>
                     <TextBlock Text="解决并帮助预防计算机问题" FontSize="11" Foreground="#666666" Margin="0,2,0,0"/>
@@ -67,7 +71,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="1" Margin="45,15,45,15">
+        <Grid Grid.Row="1" Margin="45,15,37,15">
 
             <StackPanel x:Name="pnlWelcome" Visibility="Visible">
                 <StackPanel Orientation="Horizontal" Margin="0,15,0,25">
@@ -90,28 +94,35 @@
             </StackPanel>
 
             <StackPanel x:Name="pnlResult" Visibility="Collapsed">
-                
-                <StackPanel Orientation="Horizontal" Margin="0,15,0,25" HorizontalAlignment="Center">
-                    <TextBlock Text="已成功接入网络  \@(^O^)@/  " FontSize="35" Foreground="#004578" Margin="20,0,0,0" VerticalAlignment="Center" HorizontalAlignment="Left"/>
-                </StackPanel>
+                <TextBlock Text="疑难解答已完成" FontSize="18" Foreground="#004578" Margin="0,5,0,15"/>
+                <TextBlock Text="疑难解答已对网络配置进行了一些更改。请尝试重新访问网络。" 
+                           TextWrapping="Wrap" Margin="0,0,0,20" Foreground="#333333"/>
 
-                <Grid Height="232" Width="411">
-                    <TextBlock HorizontalAlignment="Left" Margin="85,40,0,0" TextWrapping="Wrap" Text="点击查看关于此工具的" VerticalAlignment="Top" FontSize="15" Height="25" Width="150"/>
-                    <TextBlock HorizontalAlignment="Left" Margin="104,60,0,0" TextWrapping="Wrap" Text="点击查看我们的" VerticalAlignment="Top" FontSize="15" Height="20" Width="128" Cursor=""/>
-                    <TextBlock HorizontalAlignment="Left" Margin="101,80,0,0" TextWrapping="Wrap" Text="欢迎来看视频站：" VerticalAlignment="Top" FontSize="15" Height="20" Width="128" Cursor=""/>
-                    <Canvas>
-                        <TextBlock HorizontalAlignment="Center" FontSize="15" VerticalAlignment="Center"  Margin="235,40,0,0"> <Hyperlink NavigateUri="http://10.88.202.73/123" RequestNavigate="Hyperlink_RequestNavigate" Foreground="#007ACC" TextDecorations="None">更多信息</Hyperlink>
-                        </TextBlock>
-                    </Canvas>
-                    <Canvas>
-                        <TextBlock HorizontalAlignment="Center" FontSize="15" VerticalAlignment="Center" Margin="209,60,0,0"> <Hyperlink NavigateUri="http://10.88.202.73" RequestNavigate="Hyperlink_RequestNavigate"  Foreground="#007ACC" TextDecorations="None">网站</Hyperlink>
-                        </TextBlock>
-                    </Canvas>
-                    <Canvas>
-                        <TextBlock HorizontalAlignment="Center" FontSize="15" VerticalAlignment="Center" Margin="213,80,0,0"> <Hyperlink NavigateUri="https://psvideo.duckdns.org/" RequestNavigate="Hyperlink_RequestNavigate"  Foreground="#007ACC" TextDecorations="None">查看</Hyperlink>
-                        </TextBlock>
-                    </Canvas>
-                </Grid>
+                <Border BorderBrush="#D0D0D0" BorderThickness="1" Background="White" Padding="20,15">
+                    <StackPanel>
+                        <TextBlock Text="已修复问题" FontWeight="SemiBold" Margin="0,0,0,15" FontSize="14" Foreground="#333333"/>
+                        <Grid Margin="0,0,0,10">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="✔" Foreground="Green" FontSize="16" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="网关连接协议栈同步失败 (错误代码: 0x80070422)" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="已修复" Foreground="#666666" Margin="10,0,0,0"/>
+                        </Grid>
+                        <Grid Margin="0,0,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="30"/>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="✔" Foreground="Green" FontSize="16" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="1" Text="重新建立 TCP/IP 传输协议网关绑定" VerticalAlignment="Center"/>
+                            <TextBlock Grid.Column="2" Text="已修复" Foreground="#666666" Margin="10,0,0,0"/>
+                        </Grid>
+                    </StackPanel>
+                </Border>
 
                 <StackPanel Margin="0,20,0,0">
                     <Button Style="{StaticResource RetroLinkButtonStyle}" Click="btnCloseTroubleshooter_Click">
@@ -130,7 +141,7 @@
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="2" Background="#E1E1E1" BorderBrush="#D0D0D0" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="#E1E1E1" BorderBrush="#D0D0D0" BorderThickness="0,1,0,0" Grid.ColumnSpan="2">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="20,0">
                 <Button x:Name="btnNext" Content="下一步(_N)" Width="90" Height="26" Click="btnNext_Click" IsDefault="True" Background="#F0F0F0" BorderBrush="#ADADAD"/>
                 <Button x:Name="btnFinish" Content="完成(_F)" Width="90" Height="26" Visibility="Collapsed" Click="btnCancel_Click" Background="#F0F0F0" BorderBrush="#ADADAD"/>
