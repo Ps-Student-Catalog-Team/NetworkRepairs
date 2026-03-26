@@ -53,13 +53,17 @@
     </Window.Resources>
 
     <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="74*"/>
+            <ColumnDefinition/>
+        </Grid.ColumnDefinitions>
         <Grid.RowDefinitions>
             <RowDefinition Height="70"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="60"/>
         </Grid.RowDefinitions>
 
-        <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Grid.ColumnSpan="2">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="25,0">
                 <StackPanel>
                     <TextBlock Text="解决并帮助预防计算机问题" FontSize="11" Foreground="#666666" Margin="0,2,0,0"/>
@@ -67,7 +71,7 @@
             </StackPanel>
         </Border>
 
-        <Grid Grid.Row="1" Margin="45,15,45,15">
+        <Grid Grid.Row="1" Margin="45,15,37,15">
 
             <StackPanel x:Name="pnlWelcome" Visibility="Visible">
                 <StackPanel Orientation="Horizontal" Margin="0,15,0,25">
@@ -137,7 +141,7 @@
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="2" Background="#E1E1E1" BorderBrush="#D0D0D0" BorderThickness="0,1,0,0">
+        <Border Grid.Row="2" Background="#E1E1E1" BorderBrush="#D0D0D0" BorderThickness="0,1,0,0" Grid.ColumnSpan="2">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="20,0">
                 <Button x:Name="btnNext" Content="下一步(_N)" Width="90" Height="26" Click="btnNext_Click" IsDefault="True" Background="#F0F0F0" BorderBrush="#ADADAD"/>
                 <Button x:Name="btnFinish" Content="完成(_F)" Width="90" Height="26" Visibility="Collapsed" Click="btnCancel_Click" Background="#F0F0F0" BorderBrush="#ADADAD"/>

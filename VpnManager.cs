@@ -101,6 +101,7 @@ namespace NetworkTroubleshooter
         /// <returns>如果删除成功返回 true，否则返回 false。</returns>
         public bool DeleteVpn(string entryName)
         {
+            Logger.Info("test");
             try
             {
                 // 获取用户电话簿路径

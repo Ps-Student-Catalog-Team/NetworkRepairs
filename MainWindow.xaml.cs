@@ -7,18 +7,50 @@ namespace NetworkTroubleshooter
     public partial class MainWindow : Window
     {
         private VpnManager vpn = new VpnManager();
+        private bool _isCleaningUp = false; // 防止重复清理
 
-        public MainWindow()
+        public MainWindow() 
         {
             InitializeComponent();
-            Logger.Info("应用程序启动");
+            Logger.Info("\n应用程序启动");
+            DelProxyandVPN(0);
+            this.Closing += MainWindow_Closing; // 注册关闭事件
         }
 
+        // 窗口关闭前的清理操作
+        private void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            DelProxyandVPN(1);
+        }
+
+        private void DelProxyandVPN(int num)
+        {
+            if(num == 1)
+            {
+                if (_isCleaningUp) return; // 避免递归
+                _isCleaningUp = true;
+
+                try
+                {
+                    if (chkCreateProxy.IsChecked != true)
+                        vpn.DeleteVpn("以太网 4");
+                    else
+                        vpn.ClearAndDisableSystemProxy();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("删除设置时发生错误", ex);
+                }
+            }
+            else
+            {
+                vpn.ClearAndDisableSystemProxy();
+                vpn.DeleteVpn("以太网 4");
+            }
+        }
         private void txtAdvanced_MouseLeftButtonDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            // 显示复选框
             chkCreateProxy.Visibility = Visibility.Visible;
-            // 可选：点击高级后隐藏文本本身或改变样式，根据需求可保留
         }
 
         private async void btnNext_Click(object sender, RoutedEventArgs e)
@@ -27,13 +59,11 @@ namespace NetworkTroubleshooter
             {
                 SetUiState(isProcessing: true);
 
-                // 如果用户勾选了“创建代理”
                 if (chkCreateProxy.IsChecked == true)
                 {
                     txtStatus.Text = "正在设置系统代理...";
                     await Task.Delay(1000);
 
-                    // 代理服务器地址使用 VPN 服务器地址，端口固定为 1080（可根据需要调整）
                     string proxyServer = $"10.88.202.73:10001";
                     bool success = await Task.Run(() => vpn.SetSystemProxy(true, proxyServer, ""));
 
@@ -89,6 +119,7 @@ namespace NetworkTroubleshooter
                 ResetUi();
             }
         }
+
         private void SetUiState(bool isProcessing)
         {
             pnlWelcome.Visibility = isProcessing ? Visibility.Collapsed : Visibility.Visible;
@@ -103,37 +134,9 @@ namespace NetworkTroubleshooter
             pBar.IsIndeterminate = false;
             pBar.Value = 0;
         }
-        private void btnCancel_Click(object sender, RoutedEventArgs e)
-        {
-            DeleteVpnAndClose();
-        }
 
-        private void btnCloseTroubleshooter_Click(object sender, RoutedEventArgs e)
-        {
-            DeleteVpnAndClose();
-        }
+        private void btnCancel_Click(object sender, RoutedEventArgs e) => this.Close();
 
-        private void DeleteVpnAndClose()
-        {
-            try
-            {
-                if (chkCreateProxy.IsChecked != true)
-                    vpn.DeleteVpn("以太网 4");
-                else
-                    vpn.ClearAndDisableSystemProxy();
-
-
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("删除设置时发生错误", ex);
-            }
-            finally
-            {
-                // 关闭窗口
-                this.Close(); 
-            }
-        }
-
+        private void btnCloseTroubleshooter_Click(object sender, RoutedEventArgs e) => this.Close();
     }
 }
