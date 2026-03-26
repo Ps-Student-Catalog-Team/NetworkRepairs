@@ -66,7 +66,7 @@
         <Border Grid.Row="0" Background="#F0F0F0" BorderBrush="#D0D0D0" BorderThickness="0,0,0,1" Grid.ColumnSpan="2">
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="25,0">
                 <StackPanel>
-                    <TextBlock Text="解决并帮助预防计算机问题" FontSize="11" Foreground="#666666" Margin="0,2,0,0"/>
+                    <TextBlock Text="解决并帮助预防计算机网络问题" FontSize="11" Foreground="#666666" Margin="0,2,0,0"/>
                 </StackPanel>
             </StackPanel>
         </Border>

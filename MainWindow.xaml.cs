@@ -58,6 +58,7 @@ namespace NetworkTroubleshooter
         private void chkCreateProxy_Unchecked(object sender, RoutedEventArgs e)
         {
             chkAdvancedSettings.Visibility = Visibility.Collapsed;
+            chkAdvancedSettings.IsChecked = false;
         }
 
         private void txtAdvanced_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -69,11 +70,14 @@ namespace NetworkTroubleshooter
             if (chkCreateProxy.Visibility != Visibility.Visible)
             {
                 chkAdvancedSettings.Visibility = Visibility.Collapsed;
+                chkAdvancedSettings.IsChecked = false;
             }
             else
             {
                 if (chkCreateProxy.IsChecked == true)
+                {
                     chkAdvancedSettings.Visibility = Visibility.Visible;
+                }
             }
         }
         private async void btnNext_Click(object sender, RoutedEventArgs e)
