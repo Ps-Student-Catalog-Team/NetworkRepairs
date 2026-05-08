@@ -1,9 +1,13 @@
 ﻿using System.Windows;
 
-namespace NetworkRepairs
+namespace NetworkTroubleshooter
 {
-    public partial class App : System.Windows.Application
+    public partial class App : Application
     {
-        // 这里不需要写其他东西
+        protected override void OnExit(ExitEventArgs e)
+        {
+            base.OnExit(e);
+            // 退出时清理 VPN 条目 (可选)
+        }
     }
 }

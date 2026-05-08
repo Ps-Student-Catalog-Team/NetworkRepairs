@@ -1,5 +1,6 @@
 using DotRas;
 using System;
+using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using Microsoft.Win32;
@@ -9,7 +10,7 @@ namespace NetworkTroubleshooter
     public class VpnManager
     {
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        public struct RASCREDENTIALS
+        private struct RASCREDENTIALS
         {
             public int dwSize;
             public int dwMask;
@@ -24,10 +25,34 @@ namespace NetworkTroubleshooter
         private const int RASCM_PreSharedKey = 0x10;
 
         [DllImport("rasapi32.dll", CharSet = CharSet.Auto)]
-        public static extern int RasSetCredentials(string lpszPhonebook, string lpszEntry, ref RASCREDENTIALS lpCredentials, bool fClearCredentials);
+        private static extern int RasSetCredentials(
+            string lpszPhonebook, 
+            string lpszEntry, 
+            ref RASCREDENTIALS lpCredentials, 
+            bool fClearCredentials);
 
-        [Obsolete]
-        public bool CreateAndConnectVpn(string entryName, string serverAddress, string userName, string password, string psk)
+        public void FixL2tpRegistry()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(
+                    @"SYSTEM\CurrentControlSet\Services\PolicyAgent", true))
+                {
+                    if (key != null)
+                    {
+                        object val = key.GetValue("AssumeUDPEncapsulationContextOnSendRule");
+                        if (val == null || val.ToString() != "2")
+                        {
+                            key.SetValue("AssumeUDPEncapsulationContextOnSendRule", 2, RegistryValueKind.DWord);
+                        }
+                    }
+                }
+            }
+            catch { /* å¿½ç•¥æƒé™ä¸è¶³ç­‰å¼‚å¸¸ */ }
+        }
+
+        public bool ConnectVpn(string entryName, string serverAddress, 
+            string userName, string password, string preSharedKey)
         {
             try
             {
@@ -41,250 +66,103 @@ namespace NetworkTroubleshooter
                     if (phoneBook.Entries.Contains(entryName))
                         phoneBook.Entries.Remove(entryName);
 
-                    RasDevice device = RasDevice.GetDeviceByName("WAN Miniport (L2TP)", RasDeviceType.Vpn);
-                    RasEntry vpnEntry = RasEntry.CreateVpnEntry(entryName, serverAddress, RasVpnStrategy.L2tpOnly, device);
-
+                    RasDevice device = RasDevice.GetDeviceByName(
+                        "WAN Miniport (L2TP)", RasDeviceType.Vpn);
+                    RasEntry vpnEntry = RasEntry.CreateVpnEntry(
+                        entryName, serverAddress, RasVpnStrategy.L2tpOnly, device);
                     vpnEntry.Options.UsePreSharedKey = true;
 
                     phoneBook.Entries.Add(vpnEntry);
                     vpnEntry.Update();
 
-                    RASCREDENTIALS creds = new RASCREDENTIALS();
-                    creds.dwSize = Marshal.SizeOf(typeof(RASCREDENTIALS));
-                    creds.dwMask = RASCM_PreSharedKey;
-                    creds.szPassword = psk; 
+                    // è®¾ç½®é¢„å…±äº«å¯†é’¥
+                    RASCREDENTIALS creds = new RASCREDENTIALS
+                    {
+                        dwSize = Marshal.SizeOf(typeof(RASCREDENTIALS)),
+                        dwMask = RASCM_PreSharedKey,
+                        szPassword = preSharedKey
+                    };
 
                     int result = RasSetCredentials(pbPath, entryName, ref creds, false);
-                    if (result != 0) return false;
+                    if (result != 0)
+                    {
+                        Logger.Error($"RasSetCredentials failed with code {result}");
+                        return false;
+                    }
 
+                    // æ‹¨å·
                     using (RasDialer dialer = new RasDialer())
                     {
                         dialer.EntryName = entryName;
                         dialer.PhoneBookPath = pbPath;
                         dialer.Credentials = new NetworkCredential(userName, password);
-                        
-                        dialer.Dial(); 
+                        dialer.Dial();
                         return true;
                     }
                 }
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"VPN Error: {ex.Message}");
+                Logger.Error("VPN connection failed", ex);
                 return false;
             }
         }
 
-        private void FixL2tpRegistry()
+        public bool DisconnectVpn(string entryName)
         {
             try
             {
-                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services\PolicyAgent", true))
+                bool disconnected = false;
+                foreach (RasConnection connection in RasConnection.GetActiveConnections())
                 {
-                    if (key != null)
+                    if (connection.EntryName == entryName)
                     {
-                        object val = key.GetValue("AssumeUDPEncapsulationContextOnSendRule");
-                        if (val == null || val.ToString() != "2")
-                        {
-                            key.SetValue("AssumeUDPEncapsulationContextOnSendRule", 2, RegistryValueKind.DWord);
-                        }
+                        connection.HangUp();
+                        disconnected = true;
                     }
                 }
+                return disconnected;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                Logger.Error("VPN disconnect failed", ex);
+                return false;
+            }
         }
 
-        /// <summary>
-        /// É¾³ıÖ¸¶¨µÄ VPN ÌõÄ¿¡£
-        /// </summary>
-        /// <param name="entryName">ÒªÉ¾³ıµÄ VPN ÌõÄ¿Ãû³Æ¡£</param>
-        /// <returns>Èç¹ûÉ¾³ı³É¹¦·µ»Ø true£¬·ñÔò·µ»Ø false¡£</returns>
-        public bool DeleteVpn(string entryName)
+        public bool IsVpnConnected(string entryName)
         {
-            Logger.Info("test");
             try
             {
-                // »ñÈ¡ÓÃ»§µç»°²¾Â·¾¶
-                string pbPath = RasPhoneBook.GetPhoneBookPath(RasPhoneBookType.User);
+                return RasConnection.GetActiveConnections()
+                    .Any(c => c.EntryName == entryName);
+            }
+            catch
+            {
+                return false;
+            }
+        }
 
+        public bool DeleteVpn(string entryName)
+        {
+            try
+            {
+                DisconnectVpn(entryName);
+                string pbPath = RasPhoneBook.GetPhoneBookPath(RasPhoneBookType.User);
                 using (RasPhoneBook phoneBook = new RasPhoneBook())
                 {
                     phoneBook.Open(pbPath);
-
-                    // ¼ì²éÌõÄ¿ÊÇ·ñ´æÔÚ
-                    if (!phoneBook.Entries.Contains(entryName))
-                        return false;
-
-                    // ¶Ï¿ªËùÓĞÊ¹ÓÃ¸ÃÌõÄ¿µÄ»î¶¯Á¬½Ó
-                    foreach (RasConnection connection in RasConnection.GetActiveConnections())
+                    if (phoneBook.Entries.Contains(entryName))
                     {
-                        if (connection.EntryName == entryName)
-                        {
-                            try
-                            {
-                                connection.HangUp();
-                                System.Threading.Thread.Sleep(500);
-                            }
-                            catch
-                            {
-                                // ºöÂÔµ¥¸öÁ¬½Ó¶Ï¿ªÊ±µÄÒì³££¬¼ÌĞø³¢ÊÔÉ¾³ı
-                            }
-                        }
+                        phoneBook.Entries.Remove(entryName);
+                        return true;
                     }
-
-                    // É¾³ıÌõÄ¿
-                    phoneBook.Entries.Remove(entryName);
-                    return true;
                 }
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("É¾³ıVPNÌõÄ¿Ê§°Ü", ex);
                 return false;
             }
-        }
-
-        [DllImport("wininet.dll", SetLastError = true, CharSet = CharSet.Auto)]
-        private static extern bool InternetSetOption(IntPtr hInternet, int dwOption, IntPtr lpBuffer, int dwBufferLength);
-
-        private const int INTERNET_OPTION_SETTINGS_CHANGED = 39;
-        private const int INTERNET_OPTION_REFRESH = 37;
-
-        // ×¢²á±íÂ·¾¶£¨µ±Ç°ÓÃ»§£©
-        private const string InternetSettingsRegPath = @"Software\Microsoft\Windows\CurrentVersion\Internet Settings";
-
-        /// <summary>
-        /// ÉèÖÃÏµÍ³´úÀí£¨½öÊÊÓÃÓÚµ±Ç°ÓÃ»§£©
-        /// </summary>
-        /// <param name="enable">ÊÇ·ñÆôÓÃ´úÀí</param>
-        /// <param name="proxyServer">´úÀí·şÎñÆ÷µØÖ·ºÍ¶Ë¿Ú£¬ÀıÈç "127.0.0.1:8080" »ò "http=127.0.0.1:8080;https=127.0.0.1:8080"</param>
-        /// <param name="bypassList">²»Ê¹ÓÃ´úÀíµÄµØÖ·ÁĞ±í£¬ÓÃ·ÖºÅ·Ö¸ô£¬ÀıÈç "localhost;127.*;192.168.*"</param>
-        /// <returns>²Ù×÷ÊÇ·ñ³É¹¦</returns>
-        public bool SetSystemProxy(bool enable, string proxyServer, string bypassList = "")
-        {
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsRegPath, true))
-                {
-                    if (key == null)
-                        return false;
-
-                    // ÉèÖÃ´úÀíÆôÓÃ±êÖ¾
-                    key.SetValue("ProxyEnable", enable ? 1 : 0, RegistryValueKind.DWord);
-
-                    if (enable)
-                    {
-                        // ÉèÖÃ´úÀí·şÎñÆ÷µØÖ·
-                        if (!string.IsNullOrEmpty(proxyServer))
-                            key.SetValue("ProxyServer", proxyServer, RegistryValueKind.String);
-
-                        // ÉèÖÃÈÆ¹ıÁĞ±í
-                        if (bypassList != null)
-                            key.SetValue("ProxyOverride", bypassList, RegistryValueKind.String);
-                    }
-                    else
-                    {
-                        // Çå³ı´úÀíÏà¹ØÉèÖÃ
-                        // key.DeleteValue("ProxyServer", false);
-                        // key.DeleteValue("ProxyOverride", false);
-                    }
-                }
-
-                // Í¨ÖªÏµÍ³´úÀíÉèÖÃÒÑ¸ü¸Ä
-                NotifyProxyChange();
-                return true;
-            }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"SetSystemProxy error: {ex.Message}");
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// ½ûÓÃÏµÍ³´úÀí£¨µÈÍ¬ÓÚµ÷ÓÃ SetSystemProxy(false, null)£©
-        /// </summary>
-        /// <returns>²Ù×÷ÊÇ·ñ³É¹¦</returns>
-        public bool DisableSystemProxy()
-        {
-            return SetSystemProxy(false, null);
-        }
-
-        /// <summary>
-        /// »ñÈ¡µ±Ç°ÏµÍ³´úÀíÉèÖÃ£¨½öÓÃÓÚµ÷ÊÔ/ÏÔÊ¾£©
-        /// </summary>
-        /// <param name="enabled">ÊÇ·ñÆôÓÃ´úÀí</param>
-        /// <param name="proxyServer">´úÀí·şÎñÆ÷×Ö·û´®</param>
-        /// <param name="bypassList">ÈÆ¹ıÁĞ±í</param>
-        public void GetSystemProxySettings(out bool enabled, out string proxyServer, out string bypassList)
-        {
-            enabled = false;
-            proxyServer = string.Empty;
-            bypassList = string.Empty;
-
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsRegPath))
-                {
-                    if (key != null)
-                    {
-                        enabled = (key.GetValue("ProxyEnable", 0) as int?) == 1;
-                        proxyServer = key.GetValue("ProxyServer", string.Empty) as string;
-                        bypassList = key.GetValue("ProxyOverride", string.Empty) as string;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"GetSystemProxySettings error: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Í¨Öª Windows ´úÀíÉèÖÃÒÑ¸ü¸Ä£¬Ê¹ĞÂÉèÖÃÁ¢¼´ÉúĞ§
-        /// </summary>
-        private static void NotifyProxyChange()
-        {
-            try
-            {
-                // Í¨ÖªËùÓĞÓ¦ÓÃ³ÌĞò´úÀíÉèÖÃÒÑ¸ü¸Ä
-                InternetSetOption(IntPtr.Zero, INTERNET_OPTION_SETTINGS_CHANGED, IntPtr.Zero, 0);
-                // Ë¢ĞÂ´úÀíÉèÖÃ
-                InternetSetOption(IntPtr.Zero, INTERNET_OPTION_REFRESH, IntPtr.Zero, 0);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"NotifyProxyChange error: {ex.Message}");
-            }
-        }
-        /// <summary>
-        /// Çå¿ÕÏµÍ³´úÀíÉèÖÃ²¢½ûÓÃ´úÀí£¨É¾³ı´úÀí·şÎñÆ÷µØÖ·ºÍÈÆ¹ıÁĞ±í£©
-        /// </summary>
-        /// <returns>²Ù×÷ÊÇ·ñ³É¹¦</returns>
-        public bool ClearAndDisableSystemProxy()
-        {
-            try
-            {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsRegPath, true))
-                {
-                    if (key == null)
-                        return false;
-
-                    // ½ûÓÃ´úÀí
-                    key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
-
-                    // É¾³ı´úÀí·şÎñÆ÷µØÖ·ºÍÈÆ¹ıÁĞ±í£¨Èç¹û´æÔÚ£©
-                    key.DeleteValue("ProxyServer", false);  // false ±íÊ¾Èç¹ûÖµ²»´æÔÚÒ²²»Å×³öÒì³£
-                    key.DeleteValue("ProxyOverride", false);
-                }
-
-                // Í¨ÖªÏµÍ³´úÀíÉèÖÃÒÑ¸ü¸Ä
-                NotifyProxyChange();
-                return true;
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"ClearAndDisableSystemProxy error: {ex.Message}");
+                Logger.Error("Delete VPN entry failed", ex);
                 return false;
             }
         }

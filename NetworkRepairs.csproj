@@ -1,10 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-
-	  <LangVersion>10.0</LangVersion>
+    <LangVersion>10.0</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
@@ -14,33 +12,18 @@
     <Authors>Mircosoft Corporation</Authors>
     <Company>Mircosoft Corporation</Company>
     <Copyright>©Mircosoft Corporation. All rights reserved.</Copyright>
-    <PackageIcon>icons8-互联网-100.png</PackageIcon>
     <NeutralLanguage>zh-CN</NeutralLanguage>
-	<DebugType>none</DebugType>
-	<DebugSymbols>false</DebugSymbols>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
   </PropertyGroup>
 
   <ItemGroup>
     <None Remove="interneticon.png" />
-  </ItemGroup>
-
-  <ItemGroup>
     <Content Include="icons8-互联网-100.ico" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Include="..\..\..\Downloads\icons8-互联网-100.png">
-      <Pack>True</Pack>
-      <PackagePath>\</PackagePath>
-    </None>
+    <Resource Include="interneticon.png" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DotRas.for.Win7" Version="1.3.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <Resource Include="interneticon.png" />
-  </ItemGroup>
-
 </Project>

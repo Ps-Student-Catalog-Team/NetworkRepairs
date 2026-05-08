@@ -1,48 +1,30 @@
 ﻿using System;
 using System.IO;
-using System.Reflection;
 
-public static class Logger
+namespace NetworkTroubleshooter
 {
-    private static readonly string LogDir = Path.Combine(
-        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? "",
-        "logs");
-
-    static Logger()
+    public static class Logger
     {
-        if (!Directory.Exists(LogDir))
-            Directory.CreateDirectory(LogDir);
-    }
+        private static readonly string LogFilePath = 
+            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "troubleshooter.log");
 
-    public static void Info(string message)
-    {
-        WriteLog("INFO", message);
-    }
-
-    public static void Warning(string message)
-    {
-        WriteLog("WARN", message);
-    }
-
-    public static void Error(string message, Exception ex = null)
-    {
-        string fullMessage = message;
-        if (ex != null)
-            fullMessage += $"\nException: {ex.GetType()}: {ex.Message}\nStackTrace: {ex.StackTrace}";
-        WriteLog("ERROR", fullMessage);
-    }
-
-    private static void WriteLog(string level, string message)
-    {
-        string logFile = Path.Combine(LogDir, $"{DateTime.Now:yyyy-MM-dd}.log");
-        string line = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss.fff} [{level}] {message}";
-        try
+        public static void Info(string message)
         {
-            File.AppendAllText(logFile, line + Environment.NewLine);
+            WriteLog("INFO", message);
         }
-        catch
+
+        public static void Error(string message, Exception ex = null)
         {
-            // 日志写入失败时无法记录，只能忽略
+            WriteLog("ERROR", $"{message} | Exception: {ex}");
+        }
+
+        private static void WriteLog(string level, string message)
+        {
+            try
+            {
+                File.AppendAllText(LogFilePath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {message}{Environment.NewLine}");
+            }
+            catch { /* 忽略日志写入错误 */ }
         }
     }
 }
