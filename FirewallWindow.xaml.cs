@@ -7,12 +7,11 @@ namespace NetworkTroubleshooter
 {
     public partial class FirewallWindow : Window
     {
-        private readonly VpnManager _vpn = new VpnManager();
+        private readonly VpnManager_L2TP _vpn = new VpnManager_L2TP();
         private const string FirewallEntryName = "防火墙+++";
         private const string FirewallServer = "10.88.193.112";
         private const string FirewallUser = "admin";
         private const string FirewallPassword = "adm1n5";
-        private const string FirewallPreSharedKey = "what is this";
 
         public FirewallWindow()
         {
@@ -45,7 +44,7 @@ namespace NetworkTroubleshooter
             {
                 bool connected = await Task.Run(() =>
                     _vpn.ConnectVpn(FirewallEntryName, FirewallServer,
-                        FirewallUser, FirewallPassword, FirewallPreSharedKey));
+                        FirewallUser, FirewallPassword));
 
                 if (connected)
                 {
