@@ -199,7 +199,7 @@ namespace NetworkTroubleshooter
             }
             finally
             {
-                this.Close();
+                Dispatcher.Invoke(() => this.Close());
             }
         }
 
@@ -253,7 +253,7 @@ namespace NetworkTroubleshooter
             }
             finally
             {
-                this.Close();
+                Dispatcher.Invoke(() => this.Close());
             }
         }
 
