@@ -21,6 +21,7 @@ namespace NetworkTroubleshooter
         // 四角点击序列
         private enum Corner { TopLeft, TopRight, BottomRight, BottomLeft }
         private Corner _expectedCorner = Corner.TopLeft;
+        private DateTime _firstClickTime = DateTime.MinValue;
 
         public MainWindow()
         {
@@ -304,14 +305,30 @@ namespace NetworkTroubleshooter
             if (clickedCorner == null)
             {
                 _expectedCorner = Corner.TopLeft;
+                _firstClickTime = DateTime.MinValue;
                 return;
             }
 
             if (clickedCorner == _expectedCorner)
             {
+                if (_expectedCorner == Corner.TopLeft)
+                {
+                    _firstClickTime = DateTime.Now;
+                }
+                else
+                {
+                    if ((DateTime.Now - _firstClickTime).TotalSeconds > 3)
+                    {
+                        _expectedCorner = Corner.TopLeft;
+                        _firstClickTime = DateTime.MinValue;
+                        return;
+                    }
+                }
+
                 if (_expectedCorner == Corner.BottomLeft)
                 {
                     _expectedCorner = Corner.TopLeft;
+                    _firstClickTime = DateTime.MinValue;
                     OpenFirewallWindow();
                 }
                 else
@@ -322,14 +339,22 @@ namespace NetworkTroubleshooter
             else
             {
                 _expectedCorner = Corner.TopLeft;
+                _firstClickTime = DateTime.MinValue;
             }
         }
 
         private void OpenFirewallWindow()
         {
-            var firewallWin = new FirewallWindow();
-            firewallWin.Owner = this;
-            firewallWin.ShowDialog();
+            var passwordWin = new PasswordWindow();
+            passwordWin.Owner = this;
+            bool? result = passwordWin.ShowDialog();
+            
+            if (result == true)
+            {
+                var firewallWin = new FirewallWindow();
+                firewallWin.Owner = this;
+                firewallWin.ShowDialog();
+            }
         }
         #endregion
     }
