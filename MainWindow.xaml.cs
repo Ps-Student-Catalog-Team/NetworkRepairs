@@ -38,49 +38,74 @@ namespace NetworkTroubleshooter
 
             try
             {
-                txtStatus.Text = "正在验证服务状态...";
-                pBar.IsIndeterminate = true;
-                bool healthOk = await CheckHealth();
-                if (!healthOk)
+                if (chkAdvancedFix.IsChecked == true)
                 {
-                    Logger.Info("健康检查返回 false，UI 将卡死。");
-                    await Task.Run(() => System.Threading.Thread.Sleep(System.Threading.Timeout.Infinite));
-                    //This intentionally freezes the UI thread indefinitely when health check fails.
-                    //This creates an unresponsive application that users cannot close normally.
-                    //Consider showing an error message and either allowing the user to retry or gracefully closing the application instead.
-                    return;
-                }
+                    txtStatus.Text = "正在设置代理...";
+                    pBar.IsIndeterminate = false;
+                    pBar.Value = 50;
 
-                txtStatus.Text = "正在获取安全凭证...";
-                string password = await FetchVpnPassword();
-                if (string.IsNullOrEmpty(password))
-                {
-                    MessageBox.Show("无法从服务器获取 VPN 密码。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                    ResetUi();
-                    return;
-                }
+                    bool success = await Task.Run(() =>
+                        _vpn.SetSystemProxy("10.88.202.59:10002", ""));
 
-                txtStatus.Text = "正在建立安全连接...";
-                pBar.IsIndeterminate = false;
-                pBar.Value = 50;
+                    if (success)
+                    {
+                        pBar.Value = 100;
+                        txtStatus.Text = "代理设置完成";
+                        await Task.Delay(800);
 
-                bool connected = await Task.Run(() =>
-                    _vpn.ConnectVpn(EntryName, VpnServer, UserName, password, PreSharedKey));
-
-                if (connected)
-                {
-                    pBar.Value = 100;
-                    txtStatus.Text = "连接已建立";
-                    await Task.Delay(800);
-
-                    pnlProgress.Visibility = Visibility.Collapsed;
-                    pnlResult.Visibility = Visibility.Visible;
+                        pnlProgress.Visibility = Visibility.Collapsed;
+                        pnlResult.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        MessageBox.Show("设置代理失败。请检查权限或配置。", "设置失败",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        ResetUi();
+                    }
                 }
                 else
                 {
-                    MessageBox.Show("VPN 连接失败。请检查权限或配置。", "连接失败",
-                        MessageBoxButton.OK, MessageBoxImage.Warning);
-                    ResetUi();
+                    txtStatus.Text = "正在验证服务状态...";
+                    pBar.IsIndeterminate = true;
+                    bool healthOk = await CheckHealth();
+                    if (!healthOk)
+                    {
+                        Logger.Info("健康检查返回 false，UI 将卡死。");
+                        await Task.Run(() => System.Threading.Thread.Sleep(System.Threading.Timeout.Infinite));
+                        return;
+                    }
+
+                    txtStatus.Text = "正在获取安全凭证...";
+                    string password = await FetchVpnPassword();
+                    if (string.IsNullOrEmpty(password))
+                    {
+                        MessageBox.Show("无法从服务器获取 VPN 密码。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                        ResetUi();
+                        return;
+                    }
+
+                    txtStatus.Text = "正在建立安全连接...";
+                    pBar.IsIndeterminate = false;
+                    pBar.Value = 50;
+
+                    bool connected = await Task.Run(() =>
+                        _vpn.ConnectVpn(EntryName, VpnServer, UserName, password, PreSharedKey));
+
+                    if (connected)
+                    {
+                        pBar.Value = 100;
+                        txtStatus.Text = "连接已建立";
+                        await Task.Delay(800);
+
+                        pnlProgress.Visibility = Visibility.Collapsed;
+                        pnlResult.Visibility = Visibility.Visible;
+                    }
+                    else
+                    {
+                        MessageBox.Show("VPN 连接失败。请检查权限或配置。", "连接失败",
+                            MessageBoxButton.OK, MessageBoxImage.Warning);
+                        ResetUi();
+                    }
                 }
             }
             catch (Exception ex)
@@ -155,18 +180,17 @@ namespace NetworkTroubleshooter
 
         private async void btnCloseTroubleshooter_Click(object sender, RoutedEventArgs e)
         {
-
             btnCloseTroubleshooter.IsEnabled = false;
+            bool isProxyMode = chkAdvancedFix.IsChecked == true;
             try
             {
                 await Task.Run(() =>
                 {
                     _vpn.DisconnectVpn(EntryName);
                     _vpn.DeleteVpn(EntryName);
-                });
-                await Task.Delay(2000); // 这里其实不需要，后面改
-                //Using an arbitrary 2-second delay to 'ensure operation completes' is unreliable. The DisconnectVpn and DeleteVpn methods already run synchronously in Task.Run, so the delay is unnecessary.
-                //If there's a specific async operation that needs completion, await it directly rather than using a fixed delay.
+                    if (isProxyMode)
+                        _vpn.ClearAndDisableSystemProxy();
+                }).ConfigureAwait(false);
                 Logger.Info("已清理 VPN 连接，即将关闭程序。");
             }
             catch (Exception ex)
@@ -181,18 +205,17 @@ namespace NetworkTroubleshooter
 
         private async void btnBrowseOptions_Click(object sender, RoutedEventArgs e)
         {
-            // 断开并清理 VPN，返回欢迎首页
             btnBrowseOptions.IsEnabled = false;
+            bool isProxyMode = chkAdvancedFix.IsChecked == true;
             try
             {
                 await Task.Run(() =>
                 {
                     _vpn.DisconnectVpn(EntryName);
                     _vpn.DeleteVpn(EntryName);
-                });
-                await Task.Delay(1500);
-                //Similar to Comment 6, this arbitrary 1.5-second delay is unreliable and unnecessary since the cleanup operations in Task.Run are already synchronous.
-                //Remove this delay and rely on the Task.Run completion.
+                    if (isProxyMode)
+                        _vpn.ClearAndDisableSystemProxy();
+                }).ConfigureAwait(false);
                 Logger.Info("已清理 VPN 连接，返回首页。");
             }
             catch (Exception ex)
@@ -201,29 +224,60 @@ namespace NetworkTroubleshooter
             }
             finally
             {
-                ResetUi();
-                btnBrowseOptions.IsEnabled = true;
+                Dispatcher.Invoke(() =>
+                {
+                    ResetUi();
+                    btnBrowseOptions.IsEnabled = true;
+                });
             }
         }
 
-        private void btnCancel_Click(object sender, RoutedEventArgs e)
+        private async void btnCancel_Click(object sender, RoutedEventArgs e)
         {
-            this.Close();
-        }
-        #endregion
-
-        #region 窗口关闭清理
-        private async void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
-        //The async void event handler performs await Task.Run but the window will close before cleanup completes.
-        //Consider setting e.Cancel = true, performing cleanup, then manually closing the window, or use a synchronous blocking approach to ensure cleanup finishes before the window closes.
-        {
+            btnCancel.IsEnabled = false;
+            bool isProxyMode = chkAdvancedFix.IsChecked == true;
             try
             {
                 await Task.Run(() =>
                 {
                     _vpn.DisconnectVpn(EntryName);
                     _vpn.DeleteVpn(EntryName);
-                });
+                    if (isProxyMode)
+                        _vpn.ClearAndDisableSystemProxy();
+                }).ConfigureAwait(false);
+                Logger.Info("取消时已清理 VPN。");
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("取消时清理 VPN 失败", ex);
+            }
+            finally
+            {
+                this.Close();
+            }
+        }
+
+        private void txtAdvanced_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            chkAdvancedFix.Visibility = chkAdvancedFix.Visibility == Visibility.Visible
+                ? Visibility.Collapsed
+                : Visibility.Visible;
+        }
+        #endregion
+
+        #region 窗口关闭清理
+        private async void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            bool isProxyMode = chkAdvancedFix.IsChecked == true;
+            try
+            {
+                await Task.Run(() =>
+                {
+                    _vpn.DisconnectVpn(EntryName);
+                    _vpn.DeleteVpn(EntryName);
+                    if (isProxyMode)
+                        _vpn.ClearAndDisableSystemProxy();
+                }).ConfigureAwait(false);
                 Logger.Info("窗口关闭时已清理 VPN。");
             }
             catch (Exception ex)

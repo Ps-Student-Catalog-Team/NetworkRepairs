@@ -166,5 +166,51 @@ namespace NetworkTroubleshooter
                 return false;
             }
         }
+
+        public bool SetSystemProxy(string proxyServer, string proxyOverride)
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Internet Settings", true))
+                {
+                    if (key != null)
+                    {
+                        key.SetValue("ProxyEnable", 1, RegistryValueKind.DWord);
+                        key.SetValue("ProxyServer", proxyServer, RegistryValueKind.String);
+                        key.SetValue("ProxyOverride", proxyOverride, RegistryValueKind.String);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Set system proxy failed", ex);
+                return false;
+            }
+        }
+
+        public bool ClearAndDisableSystemProxy()
+        {
+            try
+            {
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Internet Settings", true))
+                {
+                    if (key != null)
+                    {
+                        key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
+                        return true;
+                    }
+                }
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Logger.Error("Clear system proxy failed", ex);
+                return false;
+            }
+        }
     }
 }
