@@ -4,7 +4,7 @@ namespace NetworkTroubleshooter
 {
     public partial class PasswordWindow : Window
     {
-        private const string CorrectPassword = "admin123";
+        private const string CorrectPassword = "pysyzx116";
 
         public PasswordWindow()
         {

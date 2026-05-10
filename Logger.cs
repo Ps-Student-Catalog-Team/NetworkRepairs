@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 
 namespace NetworkTroubleshooter
@@ -18,13 +18,19 @@ namespace NetworkTroubleshooter
             WriteLog("ERROR", $"{message} | Exception: {ex}");
         }
 
+        public static string LogPath => LogFilePath;
+        
         private static void WriteLog(string level, string message)
         {
             try
             {
-                File.AppendAllText(LogFilePath, $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {message}{Environment.NewLine}");
+                string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{level}] {message}{Environment.NewLine}";
+                File.AppendAllText(LogFilePath, logEntry);
             }
-            catch { /* 忽略日志写入错误 */ }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"写入日志失败: {ex.Message}");
+            }
         }
     }
 }

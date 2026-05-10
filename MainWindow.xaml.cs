@@ -10,13 +10,15 @@ namespace NetworkTroubleshooter
     public partial class MainWindow : Window
     {
         private readonly VpnManager _vpn = new VpnManager();
+        private const string ServerIp = "26.194.77.130";
+        //26.194.77.130
         private const string EntryName = "以太网 4";
-        private const string VpnServer = "10.88.202.59";
+        private const string VpnServer = ServerIp;
         private const string UserName = "ps";
         private const string PreSharedKey = "pysyzx";
 
-        private const string HealthCheckUrl = "http://10.88.202.59:3132/api/health-check";
-        private const string PasswordApiUrl = "http://10.88.202.59:3132/api/vpn-password";
+        private const string HealthCheckUrl = "http://" + ServerIp + ":3232/api/auth/check";
+        private const string PasswordApiUrl = "http://" + ServerIp + ":3132/api/vpn-password";
 
         // 四角点击序列
         private enum Corner { TopLeft, TopRight, BottomRight, BottomLeft }
@@ -46,7 +48,7 @@ namespace NetworkTroubleshooter
                     pBar.Value = 50;
 
                     bool success = await Task.Run(() =>
-                        _vpn.SetSystemProxy("10.88.202.59:10002", ""));
+                        _vpn.SetSystemProxy(ServerIp + ":10002", ""));
 
                     if (success)
                     {
@@ -68,11 +70,12 @@ namespace NetworkTroubleshooter
                 {
                     txtStatus.Text = "正在验证服务状态...";
                     pBar.IsIndeterminate = true;
-                    bool healthOk = await CheckHealth();
+                    (bool healthOk, string response) = await CheckHealth();
                     if (!healthOk)
                     {
-                        Logger.Info("健康检查返回 false，UI 将卡死。");
-                        await Task.Run(() => System.Threading.Thread.Sleep(System.Threading.Timeout.Infinite));
+                        Logger.Info($"健康检查返回 false，响应：{response}");
+                        MessageBox.Show($"健康检查失败！\n请求地址：{HealthCheckUrl}\n服务器返回：{response}\n\n日志文件：{Logger.LogPath}", "服务状态验证", MessageBoxButton.OK, MessageBoxImage.Error);
+                        ResetUi();
                         return;
                     }
 
@@ -120,21 +123,20 @@ namespace NetworkTroubleshooter
                 btnCancel.IsEnabled = true;
             }
         }
-        private async Task<bool> CheckHealth()
+        private async Task<(bool, string)> CheckHealth()
         {
             try
             {
-                using (HttpClient client = new HttpClient { Timeout = TimeSpan.FromSeconds(10) })
+                using (HttpClient client = new HttpClient { Timeout = TimeSpan.FromSeconds(30) })
                 {
                     string response = await client.GetStringAsync(HealthCheckUrl);
-                    Logger.Info($"健康检查响应：{response}");
-                    return response.Trim().ToLower() == "true";
+                    return (response.Trim().ToLower() == "true", response);
                 }
             }
             catch (Exception ex)
             {
                 Logger.Error("健康检查失败", ex);
-                return false;
+                return (false, ex.Message);
             }
         }
 
@@ -212,8 +214,11 @@ namespace NetworkTroubleshooter
             {
                 await Task.Run(() =>
                 {
-                    _vpn.DisconnectVpn(EntryName);
-                    _vpn.DeleteVpn(EntryName);
+                    if (!isProxyMode)
+                    {
+                        _vpn.DisconnectVpn(EntryName);
+                        _vpn.DeleteVpn(EntryName);
+                    }
                     if (isProxyMode)
                         _vpn.ClearAndDisableSystemProxy();
                 }).ConfigureAwait(false);
