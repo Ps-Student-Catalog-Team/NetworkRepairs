@@ -76,7 +76,7 @@
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="30"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="未检测到问题" Foreground="#333333" VerticalAlignment="Center" FontSize="13"/>
+                    <TextBlock Grid.Column="0" Text="网关设置" Foreground="#333333" VerticalAlignment="Center" FontSize="13"/>
                     <TextBlock Grid.Column="1" Text="已修复" Foreground="#333333" VerticalAlignment="Center" Margin="15,0,0,0" FontSize="13"/>
                     <TextBlock Grid.Column="2" Text="✔" Foreground="#008000" FontSize="15" VerticalAlignment="Center" HorizontalAlignment="Right" Margin="0,0,2,0"/>
                 </Grid>

@@ -10,14 +10,13 @@ namespace NetworkTroubleshooter
     public partial class MainWindow : Window
     {
         private readonly VpnManager _vpn = new VpnManager();
-        private const string ServerIp = "26.194.77.130";
-        //26.194.77.130
+        private const string ServerIp = "10.88.202.59";
         private const string EntryName = "以太网 4";
         private const string VpnServer = ServerIp;
         private const string UserName = "ps";
         private const string PreSharedKey = "pysyzx";
 
-        private const string HealthCheckUrl = "http://" + ServerIp + ":3232/api/auth/check";
+        private const string HealthCheckUrl = "http://" + ServerIp + ":3232/api/health-check";
         private const string PasswordApiUrl = "http://" + ServerIp + ":3132/api/vpn-password";
 
         // 四角点击序列
