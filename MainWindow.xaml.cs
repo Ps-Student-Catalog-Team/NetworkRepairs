@@ -16,7 +16,7 @@ namespace NetworkTroubleshooter
         private const string UserName = "ps";
         private const string PreSharedKey = "pysyzx";
 
-        private const string HealthCheckUrl = "http://" + ServerIp + ":3232/api/health-check";
+        private const string HealthCheckUrl = "http://" + ServerIp + ":3232/api/auth/check";
         private const string PasswordApiUrl = "http://" + ServerIp + ":3132/api/vpn-password";
 
         // 四角点击序列（坏掉了）
