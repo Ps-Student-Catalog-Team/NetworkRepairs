@@ -19,7 +19,7 @@ namespace NetworkTroubleshooter
         private const string HealthCheckUrl = "http://" + ServerIp + ":3232/api/health-check";
         private const string PasswordApiUrl = "http://" + ServerIp + ":3132/api/vpn-password";
 
-        // 四角点击序列
+        // 四角点击序列（坏掉了）
         private enum Corner { TopLeft, TopRight, BottomRight, BottomLeft }
         private Corner _expectedCorner = Corner.TopLeft;
         private DateTime _firstClickTime = DateTime.MinValue;
@@ -60,8 +60,6 @@ namespace NetworkTroubleshooter
                     }
                     else
                     {
-                        MessageBox.Show("设置代理失败。请检查权限或配置。", "设置失败",
-                            MessageBoxButton.OK, MessageBoxImage.Warning);
                         ResetUi();
                     }
                 }
@@ -73,7 +71,6 @@ namespace NetworkTroubleshooter
                     if (!healthOk)
                     {
                         Logger.Info($"健康检查返回 false，响应：{response}");
-                        MessageBox.Show($"健康检查失败！\n请求地址：{HealthCheckUrl}\n服务器返回：{response}\n\n日志文件：{Logger.LogPath}", "服务状态验证", MessageBoxButton.OK, MessageBoxImage.Error);
                         ResetUi();
                         return;
                     }
@@ -82,7 +79,6 @@ namespace NetworkTroubleshooter
                     string password = await FetchVpnPassword();
                     if (string.IsNullOrEmpty(password))
                     {
-                        MessageBox.Show("无法从服务器获取 VPN 密码。", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                         ResetUi();
                         return;
                     }
@@ -105,8 +101,6 @@ namespace NetworkTroubleshooter
                     }
                     else
                     {
-                        MessageBox.Show("VPN 连接失败。请检查权限或配置。", "连接失败",
-                            MessageBoxButton.OK, MessageBoxImage.Warning);
                         ResetUi();
                     }
                 }
@@ -114,7 +108,6 @@ namespace NetworkTroubleshooter
             catch (Exception ex)
             {
                 Logger.Error("btnNext_Click 异常", ex);
-                MessageBox.Show($"发生错误：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 ResetUi();
             }
             finally
