@@ -17,12 +17,8 @@ namespace NetworkTroubleshooter
         private const string PreSharedKey = "pysyzx";
 
         private const string HealthCheckUrl = "http://" + ServerIp + ":3232/api/auth/check";
-        private const string PasswordApiUrl = "http://" + ServerIp + ":3132/api/vpn-password";
+        private const string PasswordApiUrl = "http://" + ServerIp + ":3132/api/Vpn-Password";
 
-        // 四角点击序列（坏掉了）
-        private enum Corner { TopLeft, TopRight, BottomRight, BottomLeft }
-        private Corner _expectedCorner = Corner.TopLeft;
-        private DateTime _firstClickTime = DateTime.MinValue;
 
         public MainWindow()
         {
@@ -284,75 +280,6 @@ namespace NetworkTroubleshooter
             }
         }
 
-        private void Window_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            Point pos = e.GetPosition(this);
-            double cornerSize = 60;
-
-            Corner? clickedCorner = null;
-            if (pos.X < cornerSize && pos.Y < cornerSize)
-                clickedCorner = Corner.TopLeft;
-            else if (pos.X > this.ActualWidth - cornerSize && pos.Y < cornerSize)
-                clickedCorner = Corner.TopRight;
-            else if (pos.X > this.ActualWidth - cornerSize && pos.Y > this.ActualHeight - cornerSize)
-                clickedCorner = Corner.BottomRight;
-            else if (pos.X < cornerSize && pos.Y > this.ActualHeight - cornerSize)
-                clickedCorner = Corner.BottomLeft;
-
-            if (clickedCorner == null)
-            {
-                _expectedCorner = Corner.TopLeft;
-                _firstClickTime = DateTime.MinValue;
-                return;
-            }
-
-            if (clickedCorner == _expectedCorner)
-            {
-                if (_expectedCorner == Corner.TopLeft)
-                {
-                    _firstClickTime = DateTime.Now;
-                }
-                else
-                {
-                    if ((DateTime.Now - _firstClickTime).TotalSeconds > 3)
-                    {
-                        _expectedCorner = Corner.TopLeft;
-                        _firstClickTime = DateTime.MinValue;
-                        return;
-                    }
-                }
-
-                if (_expectedCorner == Corner.BottomLeft)
-                {
-                    _expectedCorner = Corner.TopLeft;
-                    _firstClickTime = DateTime.MinValue;
-                    OpenFirewallWindow();
-                }
-                else
-                {
-                    _expectedCorner = (Corner)((int)_expectedCorner + 1);
-                }
-            }
-            else
-            {
-                _expectedCorner = Corner.TopLeft;
-                _firstClickTime = DateTime.MinValue;
-            }
-        }
-
-        private void OpenFirewallWindow()
-        {
-            var passwordWin = new PasswordWindow();
-            passwordWin.Owner = this;
-            bool? result = passwordWin.ShowDialog();
-            
-            if (result == true)
-            {
-                var firewallWin = new FirewallWindow();
-                firewallWin.Owner = this;
-                firewallWin.ShowDialog();
-            }
-        }
         #endregion
     }
 }

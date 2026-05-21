@@ -4,7 +4,7 @@
         Title="Windows 网络故障诊断" Height="520" Width="600"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
         Background="#F0F0F0" FontFamily="Microsoft YaHei"
-        PreviewMouseLeftButtonDown="Window_PreviewMouseLeftButtonDown">
+        >
 
     <Window.Resources>
         <Style x:Key="RetroLinkButtonStyle" TargetType="Button">
