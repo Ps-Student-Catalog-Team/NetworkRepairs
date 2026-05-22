@@ -23,7 +23,6 @@ namespace NetworkTroubleshooter
         public MainWindow()
         {
             InitializeComponent();
-            Logger.Info("应用程序启动");
             this.Closing += MainWindow_Closing;
         }
 
@@ -66,7 +65,6 @@ namespace NetworkTroubleshooter
                     (bool healthOk, string response) = await CheckHealth();
                     if (!healthOk)
                     {
-                        Logger.Info($"健康检查返回 false，响应：{response}");
                         ResetUi();
                         return;
                     }
@@ -103,7 +101,6 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
-                Logger.Error("btnNext_Click 异常", ex);
                 ResetUi();
             }
             finally
@@ -123,7 +120,6 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
-                Logger.Error("健康检查失败", ex);
                 return (false, ex.Message);
             }
         }
@@ -140,15 +136,13 @@ namespace NetworkTroubleshooter
                         if (doc.RootElement.TryGetProperty("password", out JsonElement pwdElement))
                         {
                             string pwd = pwdElement.GetString();
-                            Logger.Info($"获取到 VPN 密码：{pwd}");
                             return pwd;
                         }
                     }
                 }
             }
             catch (Exception ex)
-            {
-                Logger.Error("获取 VPN 密码失败", ex);
+            { 
             }
             return null;
         }
@@ -182,11 +176,6 @@ namespace NetworkTroubleshooter
                     if (isProxyMode)
                         _vpn.ClearAndDisableSystemProxy();
                 }).ConfigureAwait(false);
-                Logger.Info("已清理 VPN 连接，即将关闭程序。");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("关闭时清理 VPN 失败", ex);
             }
             finally
             {
@@ -210,11 +199,6 @@ namespace NetworkTroubleshooter
                     if (isProxyMode)
                         _vpn.ClearAndDisableSystemProxy();
                 }).ConfigureAwait(false);
-                Logger.Info("已清理 VPN 连接，返回首页。");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("返回首页清理 VPN 失败", ex);
             }
             finally
             {
@@ -239,11 +223,6 @@ namespace NetworkTroubleshooter
                     if (isProxyMode)
                         _vpn.ClearAndDisableSystemProxy();
                 }).ConfigureAwait(false);
-                Logger.Info("取消时已清理 VPN。");
-            }
-            catch (Exception ex)
-            {
-                Logger.Error("取消时清理 VPN 失败", ex);
             }
             finally
             {
