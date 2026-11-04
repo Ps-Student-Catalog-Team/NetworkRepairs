@@ -19,11 +19,30 @@ namespace NetworkTroubleshooter
         private const string HealthCheckUrl = "http://" + ServerIp + ":3232/api/auth/check";
         private const string PasswordApiUrl = "http://" + ServerIp + ":3132/api/Vpn-Password";
 
+        // 记录本次会话实际应用过的配置，清理时以它为准（而非复选框状态）
+        private bool _vpnApplied;
+        private bool _proxyApplied;
+        private bool _cleanupDone;
 
         public MainWindow()
         {
             InitializeComponent();
             this.Closing += MainWindow_Closing;
+
+            // 启动自检：若存在同名配置（上次异常退出的残留），直接删除
+            _ = Task.Run(() =>
+            {
+                try
+                {
+                    Logger.Mark("B01");
+                    bool removed = _vpn.DeleteVpn(EntryName);
+                    Logger.Mark(removed ? "B02" : "B04");
+                }
+                catch (Exception ex)
+                {
+                    Logger.Fail("B03", ex);
+                }
+            });
         }
 
         #region 主流程：下一步
@@ -46,6 +65,7 @@ namespace NetworkTroubleshooter
 
                     if (success)
                     {
+                        _proxyApplied = true;
                         pBar.Value = 100;
                         txtStatus.Text = "代理设置完成";
                         await Task.Delay(800);
@@ -65,6 +85,7 @@ namespace NetworkTroubleshooter
                     (bool healthOk, string response) = await CheckHealth();
                     if (!healthOk)
                     {
+                        Logger.Fail("H01");
                         ResetUi();
                         return;
                     }
@@ -86,6 +107,7 @@ namespace NetworkTroubleshooter
 
                     if (connected)
                     {
+                        _vpnApplied = true;
                         pBar.Value = 100;
                         txtStatus.Text = "连接已建立";
                         await Task.Delay(800);
@@ -101,6 +123,7 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
+                Logger.Fail("G01", ex);
                 ResetUi();
             }
             finally
@@ -120,6 +143,7 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
+                Logger.Fail("H01", ex);
                 return (false, ex.Message);
             }
         }
@@ -142,7 +166,8 @@ namespace NetworkTroubleshooter
                 }
             }
             catch (Exception ex)
-            { 
+            {
+                Logger.Fail("K01", ex);
             }
             return null;
         }
@@ -163,71 +188,46 @@ namespace NetworkTroubleshooter
             btnCancel.IsEnabled = true;
         }
 
-        private async void btnCloseTroubleshooter_Click(object sender, RoutedEventArgs e)
+        private void btnCloseTroubleshooter_Click(object sender, RoutedEventArgs e)
         {
-            btnCloseTroubleshooter.IsEnabled = false;
-            bool isProxyMode = chkAdvancedFix.IsChecked == true;
-            try
-            {
-                await Task.Run(() =>
-                {
-                    _vpn.DisconnectVpn(EntryName);
-                    _vpn.DeleteVpn(EntryName);
-                    if (isProxyMode)
-                        _vpn.ClearAndDisableSystemProxy();
-                }).ConfigureAwait(false);
-            }
-            finally
-            {
-                Dispatcher.Invoke(() => this.Close());
-            }
+            // 统一走 Closing 的清理路径，只关窗，避免重复清理
+            this.Close();
         }
 
         private async void btnBrowseOptions_Click(object sender, RoutedEventArgs e)
         {
             btnBrowseOptions.IsEnabled = false;
-            bool isProxyMode = chkAdvancedFix.IsChecked == true;
             try
             {
                 await Task.Run(() =>
                 {
-                    if (!isProxyMode)
+                    if (_vpnApplied)
                     {
                         _vpn.DisconnectVpn(EntryName);
                         _vpn.DeleteVpn(EntryName);
+                        _vpnApplied = false;
                     }
-                    if (isProxyMode)
+                    if (_proxyApplied)
+                    {
                         _vpn.ClearAndDisableSystemProxy();
-                }).ConfigureAwait(false);
+                        _proxyApplied = false;
+                    }
+                });
             }
             finally
             {
-                Dispatcher.Invoke(() =>
-                {
-                    ResetUi();
-                    btnBrowseOptions.IsEnabled = true;
-                });
+                // 回到真正的初始选择状态
+                chkAdvancedFix.IsChecked = false;
+                chkAdvancedFix.Visibility = Visibility.Collapsed;
+                ResetUi();
+                btnBrowseOptions.IsEnabled = true;
             }
         }
 
-        private async void btnCancel_Click(object sender, RoutedEventArgs e)
+        private void btnCancel_Click(object sender, RoutedEventArgs e)
         {
-            btnCancel.IsEnabled = false;
-            bool isProxyMode = chkAdvancedFix.IsChecked == true;
-            try
-            {
-                await Task.Run(() =>
-                {
-                    _vpn.DisconnectVpn(EntryName);
-                    _vpn.DeleteVpn(EntryName);
-                    if (isProxyMode)
-                        _vpn.ClearAndDisableSystemProxy();
-                }).ConfigureAwait(false);
-            }
-            finally
-            {
-                Dispatcher.Invoke(() => this.Close());
-            }
+            // 统一走 Closing 的清理路径，只关窗，避免重复清理
+            this.Close();
         }
 
         private void txtAdvanced_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
@@ -241,21 +241,39 @@ namespace NetworkTroubleshooter
         #region 窗口关闭清理
         private async void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            bool isProxyMode = chkAdvancedFix.IsChecked == true;
+            if (_cleanupDone)
+                return;
+
+            // 先拦住关闭，等清理完成后再真正关窗，防止进程提前退出留下痕迹
+            e.Cancel = true;
             try
             {
                 await Task.Run(() =>
                 {
-                    _vpn.DisconnectVpn(EntryName);
-                    _vpn.DeleteVpn(EntryName);
-                    if (isProxyMode)
+                    if (_vpnApplied)
+                    {
+                        _vpn.DisconnectVpn(EntryName);
+                        _vpn.DeleteVpn(EntryName);
+                        _vpnApplied = false;
+                    }
+                    if (_proxyApplied)
+                    {
                         _vpn.ClearAndDisableSystemProxy();
-                }).ConfigureAwait(false);
-                Logger.Info("窗口关闭时已清理 VPN。");
+                        _proxyApplied = false;
+                    }
+                    // 无论哪种模式，都还原 NAT-T 注册表改动
+                    _vpn.RestoreL2tpRegistry();
+                });
+                Logger.Mark("W01");
             }
             catch (Exception ex)
             {
-                Logger.Error("窗口关闭清理异常", ex);
+                Logger.Fail("W02", ex);
+            }
+            finally
+            {
+                _cleanupDone = true;
+                this.Close();
             }
         }
 

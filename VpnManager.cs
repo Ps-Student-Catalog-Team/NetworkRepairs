@@ -31,6 +31,11 @@ namespace NetworkTroubleshooter
             ref RASCREDENTIALS lpCredentials, 
             bool fClearCredentials);
 
+        // NAT-T 注册表改动记录（用于退出时还原，不留痕迹）
+        private bool _natRuleChanged;
+        private bool _natRuleExisted;
+        private object _natRuleOriginal;
+
         public void FixL2tpRegistry()
         {
             try
@@ -43,17 +48,54 @@ namespace NetworkTroubleshooter
                         object val = key.GetValue("AssumeUDPEncapsulationContextOnSendRule");
                         if (val == null || val.ToString() != "2")
                         {
+                            _natRuleExisted = val != null;
+                            _natRuleOriginal = val;
                             key.SetValue("AssumeUDPEncapsulationContextOnSendRule", 2, RegistryValueKind.DWord);
+                            _natRuleChanged = true;
+                            Logger.Mark("R00");
                         }
                     }
                 }
             }
-            catch { /* 忽略权限不足等异常 */ }
+            catch (Exception ex)
+            {
+                Logger.Fail("R01", ex);
+            }
         }
 
-        public bool ConnectVpn(string entryName, string serverAddress, 
+        /// <summary>
+        /// 退出前还原 NAT-T 注册表：原来没有该值则删除，原来有则写回原值。
+        /// </summary>
+        public void RestoreL2tpRegistry()
+        {
+            if (!_natRuleChanged)
+                return;
+            try
+            {
+                using (RegistryKey key = Registry.LocalMachine.OpenSubKey(
+                    @"SYSTEM\CurrentControlSet\Services\PolicyAgent", true))
+                {
+                    if (key != null)
+                    {
+                        if (_natRuleExisted)
+                            key.SetValue("AssumeUDPEncapsulationContextOnSendRule", _natRuleOriginal);
+                        else
+                            key.DeleteValue("AssumeUDPEncapsulationContextOnSendRule", false);
+                        _natRuleChanged = false;
+                        Logger.Mark("R09");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.Fail("R02", ex);
+            }
+        }
+
+        public bool ConnectVpn(string entryName, string serverAddress,
             string userName, string password, string preSharedKey)
         {
+            bool entryCreated = false;
             try
             {
                 FixL2tpRegistry();
@@ -74,6 +116,7 @@ namespace NetworkTroubleshooter
 
                     phoneBook.Entries.Add(vpnEntry);
                     vpnEntry.Update();
+                    entryCreated = true;
 
                     // 设置预共享密钥
                     RASCREDENTIALS creds = new RASCREDENTIALS
@@ -86,7 +129,8 @@ namespace NetworkTroubleshooter
                     int result = RasSetCredentials(pbPath, entryName, ref creds, false);
                     if (result != 0)
                     {
-                        Logger.Error($"RasSetCredentials failed with code {result}");
+                        Logger.Fail($"C02-{result}");
+                        phoneBook.Entries.Remove(entryName); // 回滚，不留半成品条目
                         return false;
                     }
 
@@ -97,13 +141,16 @@ namespace NetworkTroubleshooter
                         dialer.PhoneBookPath = pbPath;
                         dialer.Credentials = new NetworkCredential(userName, password);
                         dialer.Dial();
+                        Logger.Mark("C00");
                         return true;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error("VPN connection failed", ex);
+                Logger.Fail("C01", ex);
+                if (entryCreated)
+                    DeleteVpn(entryName); // 失败回滚，不留下半成品配置
                 return false;
             }
         }
@@ -125,7 +172,7 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
-                Logger.Error("VPN disconnect failed", ex);
+                Logger.Fail("D01", ex);
                 return false;
             }
         }
@@ -137,8 +184,9 @@ namespace NetworkTroubleshooter
                 return RasConnection.GetActiveConnections()
                     .Any(c => c.EntryName == entryName);
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.Fail("Q01", ex);
                 return false;
             }
         }
@@ -162,7 +210,7 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
-                Logger.Error("Delete VPN entry failed", ex);
+                Logger.Fail("D02", ex);
                 return false;
             }
         }
@@ -179,6 +227,7 @@ namespace NetworkTroubleshooter
                         key.SetValue("ProxyEnable", 1, RegistryValueKind.DWord);
                         key.SetValue("ProxyServer", proxyServer, RegistryValueKind.String);
                         key.SetValue("ProxyOverride", proxyOverride, RegistryValueKind.String);
+                        Logger.Mark("P00");
                         return true;
                     }
                 }
@@ -186,7 +235,7 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
-                Logger.Error("Set system proxy failed", ex);
+                Logger.Fail("P01", ex);
                 return false;
             }
         }
@@ -201,6 +250,10 @@ namespace NetworkTroubleshooter
                     if (key != null)
                     {
                         key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
+                        // 连值一起删除，不留痕迹
+                        key.DeleteValue("ProxyServer", false);
+                        key.DeleteValue("ProxyOverride", false);
+                        Logger.Mark("P03");
                         return true;
                     }
                 }
@@ -208,7 +261,7 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
-                Logger.Error("Clear system proxy failed", ex);
+                Logger.Fail("P02", ex);
                 return false;
             }
         }

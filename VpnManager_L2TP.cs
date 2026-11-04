@@ -28,9 +28,10 @@ namespace NetworkTroubleshooter
                     }
                 }
             }
-            catch { /* 忽略权限不足等异常 */ }
-            //Empty catch block silently swallows all exceptions, making debugging difficult. Consider logging the exception even if
-            //you choose to continue execution, or at minimum catch specific exception types (e.g., UnauthorizedAccessException, SecurityException) rather than catching all exceptions.
+            catch (Exception ex)
+            {
+                Logger.Fail("R01", ex);
+            }
         }
 
         /// <summary>
@@ -66,15 +67,13 @@ namespace NetworkTroubleshooter
                         dialer.PhoneBookPath = pbPath;
                         dialer.Credentials = new NetworkCredential(userName, password);
                         dialer.Dial();
-                        //The comment suggests using Task.Run externally, but this synchronous call is already inside a Task.Run at the call site (line 69 in MainWindow.xaml.cs shows await Task.Run(...)). The
-                        //comment should either be removed or clarified to avoid confusion about the threading context.
                         return true;
                     }
                 }
             }
             catch (Exception ex)
             {
-                Logger.Error("L2TP VPN connection failed", ex);
+                Logger.Fail("C01", ex);
                 return false;
             }
         }
@@ -96,7 +95,7 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
-                Logger.Error("L2TP VPN disconnect failed", ex);
+                Logger.Fail("D01", ex);
                 return false;
             }
         }
@@ -111,9 +110,9 @@ namespace NetworkTroubleshooter
                 return RasConnection.GetActiveConnections()
                     .Any(c => c.EntryName == entryName);
             }
-            catch
+            catch (Exception ex)
             {
-                //Empty catch block swallows all exceptions without logging. Consider logging the exception before returning false to aid in troubleshooting connection status checks.
+                Logger.Fail("Q01", ex);
                 return false;
             }
         }
@@ -140,7 +139,7 @@ namespace NetworkTroubleshooter
             }
             catch (Exception ex)
             {
-                Logger.Error("L2TP VPN entry delete failed", ex);
+                Logger.Fail("D02", ex);
                 return false;
             }
         }
