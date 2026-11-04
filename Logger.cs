@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 
 namespace NetworkTroubleshooter
@@ -19,8 +20,63 @@ namespace NetworkTroubleshooter
     /// </summary>
     public static class Logger
     {
-        private static readonly string LogFilePath =
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "diagcache.dat");
+        private static readonly string LogFilePath = ResolveLogPath();
+
+        /// <summary>
+        /// 默认写入 %APPDATA%\repair\diagcache.dat（即 AppData\Roaming\repair）。
+        /// 不使用 AppDomain.BaseDirectory：单文件发布时它指向运行时临时解压
+        /// 目录（%TEMP%\.net\...），日志会散落且被 Temp 清理。
+        /// 目录不存在会自动创建；如需换位置，可用 DIAGCACHE_PATH 环境变量
+        /// 指定完整文件路径（支持 %VAR% 形式的变量）。
+        /// </summary>
+        private static string ResolveLogPath()
+        {
+            string custom = Environment.GetEnvironmentVariable("DIAGCACHE_PATH");
+            if (!string.IsNullOrWhiteSpace(custom))
+                custom = Environment.ExpandEnvironmentVariables(custom);
+
+            string path;
+            if (!string.IsNullOrWhiteSpace(custom))
+            {
+                path = custom;
+            }
+            else
+            {
+                string roaming = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+                path = !string.IsNullOrEmpty(roaming)
+                    ? Path.Combine(roaming, "repair", "diagcache.dat")
+                    : Path.Combine(GetExeDirectory(), "diagcache.dat");
+            }
+
+            try
+            {
+                string dir = Path.GetDirectoryName(Path.GetFullPath(path));
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
+            }
+            catch
+            {
+                // 目录创建失败由 WriteLog 的异常分支处理，不影响主流程
+            }
+
+            return path;
+        }
+
+        private static string GetExeDirectory()
+        {
+            try
+            {
+                string exe = Process.GetCurrentProcess().MainModule.FileName;
+                string dir = Path.GetDirectoryName(exe);
+                if (!string.IsNullOrEmpty(dir))
+                    return dir;
+            }
+            catch
+            {
+                // 取不到宿主路径时退回下面的默认位置
+            }
+            return AppDomain.CurrentDomain.BaseDirectory;
+        }
 
         /// <summary>记录一个普通事件代号。</summary>
         public static void Mark(string code)
@@ -44,9 +100,10 @@ namespace NetworkTroubleshooter
                 string logEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{kind}] {code}{detail}{Environment.NewLine}";
                 File.AppendAllText(LogFilePath, logEntry);
             }
-            catch
+            catch (Exception writeEx)
             {
-                // 日志写入失败不影响主流程
+                // 写入失败不影响主流程；仅输出到调试器，不落盘、不留痕迹
+                System.Diagnostics.Debug.WriteLine($"log write skipped: {writeEx.HResult:X8}");
             }
         }
     }
