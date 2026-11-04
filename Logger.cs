@@ -4,7 +4,7 @@ using System.IO;
 namespace NetworkTroubleshooter
 {
     /// <summary>
-    /// 诊断日志。
+    /// 诊断日志
     /// 为降低敏感性，日志只记录事件代号，不记录服务器地址、凭据、
     /// 条目名以及任何能暴露程序用途的字样。文件名同样去特征化。
     ///
